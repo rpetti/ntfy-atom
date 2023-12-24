@@ -30,8 +30,8 @@ func getTopic(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	topic := vars["topic"]
 	since := r.URL.Query().Get("since")
-	if since != "" {
-		since = "7d"
+	if since == "" {
+		since = "168h"
 	}
 	feed, err := feedify(topic, since)
 	if err != nil {
@@ -77,7 +77,6 @@ func feedify(topic string, since string) (string, error) {
 		return "", err
 	}
 
-    log.Println(string(b))
     feed_items := []*feeds.Item{}
 
 	for _, raw_event := range strings.Split(string(b), "\n") {
