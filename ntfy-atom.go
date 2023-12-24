@@ -79,6 +79,9 @@ func feedify(topic string, since string) (string, error) {
 
     feed_items := []*feeds.Item{}
 
+
+    updated := time.Unix(0,0)
+
 	for _, raw_event := range strings.Split(string(b), "\n") {
         if strings.Trim(raw_event, " ") == "" {
             continue
@@ -89,19 +92,25 @@ func feedify(topic string, since string) (string, error) {
             log.Printf("failed to parse %s", raw_event)
             return "", err
         }
+        event_time := time.Unix(event.Time, 0)
+        if event_time.After(updated) {
+            updated = event_time
+        }
 
         feed_items = append(feed_items, &feeds.Item{
             Title: event.Title,
             Content: event.Message,
-            Created: time.Unix(event.Time, 0),
+            Created: event_time,
+            Author: &feeds.Author{Name: "ntfy", Email: fmt.Sprintf("ntfy@%s", ntfy_url.Hostname())},
         })
 	}
     feed := &feeds.Feed{
         Title: fmt.Sprintf("ntfy topic %s", topic),
         Link: &feeds.Link{Href: ntfy_url.JoinPath(topic).String()},
         Items: feed_items,
+        Updated: updated,
+        Author: &feeds.Author{Name: "ntfy", Email: fmt.Sprintf("ntfy@%s", ntfy_url.Hostname())},
     }
-
 	return feed.ToAtom()
 }
 
