@@ -11,12 +11,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/feeds"
 	"github.com/gorilla/mux"
 )
 
 var (
 	ntfy_url *url.URL
+    uuid_namespace uuid.UUID
 )
 
 func getHealthCheck(w http.ResponseWriter, r *http.Request) {
@@ -97,11 +99,19 @@ func feedify(topic string, since string) (string, error) {
             updated = event_time
         }
 
+        event_uuid := uuid.NewSHA1(uuid_namespace, []byte(fmt.Sprintf(
+            "%s:%s:%d",
+            event.Title,
+            event.Message,
+            event.Time,
+        )))
+
         feed_items = append(feed_items, &feeds.Item{
             Title: event.Title,
             Content: event.Message,
             Created: event_time,
             Author: &feeds.Author{Name: "ntfy", Email: fmt.Sprintf("ntfy@%s", ntfy_url.Hostname())},
+            Id: fmt.Sprintf("urn:uuid:%s", event_uuid.String()),
         })
 	}
     feed := &feeds.Feed{
@@ -119,6 +129,13 @@ func main() {
 	r.HandleFunc("/health", getHealthCheck)
 	r.HandleFunc("/topics/{topic}", getTopic)
 
+    var err error
+
+    uuid_namespace, err = uuid.Parse("97ef7f2e-9733-4bf3-ac69-4ba1c59ca656")
+    if err != nil {
+        log.Fatalf("%v", err)
+    }
+
 	port := os.Getenv("NTFY_ATOM_PORT")
 	if port == "" {
 		port = "8080"
@@ -127,7 +144,7 @@ func main() {
 	if os.Getenv("NTFY_URL") == "" {
 		log.Fatalf("NTFY_URL not set, cannot start")
 	}
-	var err error
+
 	ntfy_url, err = url.Parse(os.Getenv("NTFY_URL"))
 	if err != nil {
 		log.Fatalf("not a valid ntfy url: %v", err)
