@@ -17,8 +17,8 @@ import (
 )
 
 var (
-	ntfy_url *url.URL
-    uuid_namespace uuid.UUID
+	ntfy_url       *url.URL
+	uuid_namespace uuid.UUID
 )
 
 func getHealthCheck(w http.ResponseWriter, r *http.Request) {
@@ -79,48 +79,47 @@ func feedify(topic string, since string) (string, error) {
 		return "", err
 	}
 
-    feed_items := []*feeds.Item{}
+	feed_items := []*feeds.Item{}
 
-
-    updated := time.Unix(0,0)
+	updated := time.Unix(0, 0)
 
 	for _, raw_event := range strings.Split(string(b), "\n") {
-        if strings.Trim(raw_event, " ") == "" {
-            continue
-        }
-        event := &NtfyEvent{}
-        err := json.Unmarshal([]byte(raw_event), event)
-        if err != nil {
-            log.Printf("failed to parse %s", raw_event)
-            return "", err
-        }
-        event_time := time.Unix(event.Time, 0)
-        if event_time.After(updated) {
-            updated = event_time
-        }
+		if strings.Trim(raw_event, " ") == "" {
+			continue
+		}
+		event := &NtfyEvent{}
+		err := json.Unmarshal([]byte(raw_event), event)
+		if err != nil {
+			log.Printf("failed to parse %s", raw_event)
+			return "", err
+		}
+		event_time := time.Unix(event.Time, 0)
+		if event_time.After(updated) {
+			updated = event_time
+		}
 
-        event_uuid := uuid.NewSHA1(uuid_namespace, []byte(fmt.Sprintf(
-            "%s:%s:%d",
-            event.Title,
-            event.Message,
-            event.Time,
-        )))
+		event_uuid := uuid.NewSHA1(uuid_namespace, []byte(fmt.Sprintf(
+			"%s:%s:%d",
+			event.Title,
+			event.Message,
+			event.Time,
+		)))
 
-        feed_items = append(feed_items, &feeds.Item{
-            Title: event.Title,
-            Content: event.Message,
-            Created: event_time,
-            Author: &feeds.Author{Name: "ntfy", Email: fmt.Sprintf("ntfy@%s", ntfy_url.Hostname())},
-            Id: fmt.Sprintf("urn:uuid:%s", event_uuid.String()),
-        })
+		feed_items = append(feed_items, &feeds.Item{
+			Title:   event.Title,
+			Content: event.Message,
+			Created: event_time,
+			Author:  &feeds.Author{Name: "ntfy", Email: fmt.Sprintf("ntfy@%s", ntfy_url.Hostname())},
+			Id:      fmt.Sprintf("urn:uuid:%s", event_uuid.String()),
+		})
 	}
-    feed := &feeds.Feed{
-        Title: fmt.Sprintf("ntfy topic %s", topic),
-        Link: &feeds.Link{Href: ntfy_url.JoinPath(topic).String()},
-        Items: feed_items,
-        Updated: updated,
-        Author: &feeds.Author{Name: "ntfy", Email: fmt.Sprintf("ntfy@%s", ntfy_url.Hostname())},
-    }
+	feed := &feeds.Feed{
+		Title:   fmt.Sprintf("ntfy topic %s", topic),
+		Link:    &feeds.Link{Href: ntfy_url.JoinPath(topic).String()},
+		Items:   feed_items,
+		Updated: updated,
+		Author:  &feeds.Author{Name: "ntfy", Email: fmt.Sprintf("ntfy@%s", ntfy_url.Hostname())},
+	}
 	return feed.ToAtom()
 }
 
@@ -129,12 +128,12 @@ func main() {
 	r.HandleFunc("/health", getHealthCheck)
 	r.HandleFunc("/topics/{topic}", getTopic)
 
-    var err error
+	var err error
 
-    uuid_namespace, err = uuid.Parse("97ef7f2e-9733-4bf3-ac69-4ba1c59ca656")
-    if err != nil {
-        log.Fatalf("%v", err)
-    }
+	uuid_namespace, err = uuid.Parse("97ef7f2e-9733-4bf3-ac69-4ba1c59ca656")
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
 
 	port := os.Getenv("NTFY_ATOM_PORT")
 	if port == "" {
