@@ -27,3 +27,9 @@ Health check URL:
 
 `http://ntfy-atom:8080/health`
 
+## Docker Image
+
+`ghcr.io/rpetti/ntfy-atom:v1.0.0`
+
+No volumes needed, just use the aformentioned environment variables for configuration.
+
